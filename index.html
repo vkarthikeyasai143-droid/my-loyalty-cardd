@@ -1,26 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loyalty Card</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loyalty Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body>
-<div id="root"></div>
-<script type="text/babel">
-function App() {
-return (
-<div className="min-h-screen bg-gray-100">
-{/* మీ అప్లికేషన్ కోడ్ ఇక్కడ వస్తుంది */}
-</div>
-);
-}
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
-</script>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [stamps, setStamps] = React.useState(0);
+            const totalStamps = 10;
+            const reward = "Free Coffee";
+
+            const addStamp = () => {
+                if (stamps < totalStamps) {
+                    setStamps(stamps + 1);
+                }
+            };
+
+            const resetCard = () => {
+                setStamps(0);
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6">
+                    <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden">
+                        <div className="bg-amber-600 p-8 text-white text-center">
+                            <h1 className="text-3xl font-bold mb-2">My Loyalty Card</h1>
+                            <p className="text-amber-100 italic">Collect {totalStamps} stamps to get a {reward}!</p>
+                        </div>
+                        <div className="p-8">
+                            <div className="grid grid-cols-5 gap-4 mb-8">
+                                {[...Array(totalStamps)].map((_, index) => (
+                                    <div 
+                                        key={index}
+                                        onClick={addStamp}
+                                        className={`w-12 h-12 rounded-full flex items-center justify-center text-xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+                                            index < stamps 
+                                                ? 'bg-amber-500 text-white shadow-md' 
+                                                : 'bg-gray-100 text-gray-300 border-2 border-dashed border-gray-300'
+                                        }`}
+                                    >
+                                        {index < stamps ? '⭐' : ''}
+                                    </div>
+                                ))}
+                            </div>
+                            {stamps === totalStamps ? (
+                                <button 
+                                    onClick={resetCard}
+                                    className="w-full py-4 bg-green-500 text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-green-600 transition-colors"
+                                >
+                                    Claim Reward!
+                                </button>
+                            ) : (
+                                <p className="text-center text-gray-500 font-medium">
+                                    {totalStamps - stamps} stamps left to go!
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
