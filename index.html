@@ -1,344 +1,280 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Smartphone, Shield, Star, Gift, Check, Lock, User, 
-  ArrowLeft, ChevronRight, Settings, Plus, Minus, Trash2, Key 
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Rewards - Digital Loyalty Card</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans">
+    <div id="root"></div>
 
-const INITIAL_SETTINGS = {
-  brandName: "The Copper Skillet",
-  heroTitle: "Digital Loyalty Card",
-  heroSubtitle: "Collect stamps with every visit and unlock delicious rewards!",
-  heroBadgeText: "10 stamps = Free Craft Burger & Shake",
-  heroBgUrl: "https://placehold.co/600x300/78350f/ffffff?text=The+Copper+Skillet",
-  footerText: "© 2026 The Copper Skillet. All rights reserved."
-};
-
-export default function App() {
-  const [view, setView] = useState('home'); // home, userDashboard, adminLogin, adminPanel, masterPanel
-  const [mobile, setMobile] = useState('');
-  const [pin, setPin] = useState('');
-  const [adminPin, setAdminPin] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const [config, setConfig] = useState(() => {
-    try {
-      const saved = localStorage.getItem('loyalty_master_config');
-      return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-    } catch (e) {
-      return INITIAL_SETTINGS;
-    }
-  });
-
-  const [customers, setCustomers] = useState(() => {
-    try {
-      const saved = localStorage.getItem('loyalty_customers');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
-
-  const [adminPassword, setAdminPassword] = useState(() => {
-    return localStorage.getItem('loyalty_admin_password') || '7013';
-  });
-  
-  const [newAdminPassword, setNewAdminPassword] = useState('');
-  const [currentAdminPasswordInput, setCurrentAdminPasswordInput] = useState('');
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('loyalty_master_config', JSON.stringify(config));
-    } catch (e) {}
-  }, [config]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('loyalty_customers', JSON.stringify(customers));
-    } catch (e) {}
-  }, [customers]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('loyalty_admin_password', adminPassword);
-    } catch (e) {}
-  }, [adminPassword]);
-
-  const validateMobile = (mob) => {
-    const regex = /^[6-9]\d{9}$/;
-    return regex.test(mob);
-  };
-
-  const handleCustomerLogin = (e) => {
-    e.preventDefault();
-    if (!validateMobile(mobile)) {
-      alert('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.');
-      return;
-    }
-    if (!customers[mobile]) {
-      setCustomers(prev => ({
-        ...prev,
-        [mobile]: { pin: pin || '1234', stamps: 0, history: [] }
-      }));
-    } else if (customers[mobile].pin !== (pin || '1234')) {
-      alert('Incorrect PIN! Please try again.');
-      return;
-    }
-    setView('userDashboard');
-  };
-
-  const updateStamps = (mob, delta) => {
-    setCustomers(prev => {
-      const current = prev[mob] || { stamps: 0, history: [] };
-      const newStamps = Math.max(0, Math.min(10, current.stamps + delta));
-      return {
-        ...prev,
-        [mob]: {
-          ...current,
-          stamps: newStamps,
-          history: [...current.history, { date: new Date().toLocaleString(), delta }]
-        }
-      };
-    });
-  };
-
-  const resetCard = (mob) => {
-    setCustomers(prev => ({
-      ...prev,
-      [mob]: { ...prev[mob], stamps: 0, history: [...prev[mob].history, { date: new Date().toLocaleString(), delta: 'Reset' }] }
-    }));
-  };
-
-  const deleteCustomer = (mob) => {
-    setCustomers(prev => {
-      const updated = { ...prev };
-      delete updated[mob];
-      return updated;
-    });
-  };
-
-  const changeAdminPassword = (e) => {
-    e.preventDefault();
-    if (currentAdminPasswordInput !== adminPassword) {
-      alert('Current admin password is incorrect.');
-      return;
-    }
-    if (newAdminPassword.length < 4) {
-      alert('New password must be at least 4 characters long.');
-      return;
-    }
-    setAdminPassword(newAdminPassword);
-    setCurrentAdminPasswordInput('');
-    setNewAdminPassword('');
-    alert('Admin password updated successfully.');
-  };
-
-  const filteredCustomers = useMemo(() => {
-    return Object.keys(customers).filter(m => m.includes(searchTerm));
-  }, [customers, searchTerm]);
-
-  return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-900 font-sans">
-      <header className="bg-amber-900 text-white p-4 shadow-md flex justify-between items-center">
-        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('home')}>
-          <span className="text-xl font-bold">{config.brandName || "Loyalty App"}</span>
-        </div>
-        <div className="space-x-2 flex items-center">
-          {view.startsWith('admin') || view.startsWith('master') ? (
-             <button onClick={() => setView('home')} className="bg-amber-800 px-3 py-1 rounded text-sm hover:bg-amber-700 font-bold">Back to Home</button>
-          ) : (
-             <button onClick={() => setView('adminLogin')} className="w-10 h-10 rounded-full bg-amber-800 flex items-center justify-center hover:bg-amber-700 border-2 border-white/20 shadow-lg transition-all">
-               <span className="text-lg font-black tracking-tighter">A</span>
-             </button>
-          )}
-        </div>
-      </header>
-
-      <main className="flex-grow p-4 max-w-md mx-auto w-full">
-        {view === 'home' && (
-          <div className="space-y-6 text-center animate-in fade-in duration-500">
-            <div className="rounded-xl overflow-hidden shadow-lg bg-cover bg-center h-48 flex items-center justify-center p-4 text-white relative" style={{ backgroundImage: `url(${config.heroBgUrl})` }}>
-              <div className="absolute inset-0 bg-black/50"></div>
-              <div className="relative z-10 w-full">
-                <h1 className="text-2xl font-bold drop-shadow-md">{config.heroTitle}</h1>
-                <p className="text-sm mt-1 drop-shadow-sm">{config.heroSubtitle}</p>
-              </div>
-            </div>
-            <div className="bg-amber-100 text-amber-800 p-3 rounded-lg font-medium text-sm shadow-sm border border-amber-200">
-              {config.heroBadgeText}
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-md space-y-4 border border-slate-100">
-              <h2 className="text-lg font-bold text-slate-800 border-b pb-2">Customer Login</h2>
-              <form onSubmit={handleCustomerLogin} className="space-y-3">
-                <input 
-                  type="tel" 
-                  placeholder="Mobile Number" 
-                  value={mobile} 
-                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all"
-                  maxLength="10"
-                  required
-                />
-                <input 
-                  type="password" 
-                  placeholder="6-Digit PIN" 
-                  value={pin} 
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all"
-                  maxLength="6"
-                  required
-                />
-                <button type="submit" className="w-full bg-amber-600 text-white p-3 rounded-lg font-bold hover:bg-amber-700 shadow-lg shadow-amber-600/20 transition-all">
-                  Open Loyalty Card
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {view === 'userDashboard' && customers[mobile] && (
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-6 animate-in slide-in-from-bottom-4 duration-500 border border-slate-100">
-            <div className="flex justify-between items-center border-b pb-4">
-              <h2 className="font-bold text-lg flex items-center gap-2"><User className="text-amber-600"/>{mobile}</h2>
-              <button onClick={() => setView('home')} className="text-sm text-red-600 font-medium hover:underline">Logout</button>
-            </div>
-            <div className="text-center bg-amber-50 p-4 rounded-xl border border-amber-200 shadow-inner">
-              <p className="text-sm text-amber-800 font-semibold">Your Stamps</p>
-              <p className="text-3xl font-black text-amber-900 mt-1">{customers[mobile].stamps} / 10</p>
-            </div>
-            <div className="grid grid-cols-5 gap-3">
-              {[...Array(10)].map((_, idx) => {
-                const isStamped = idx < customers[mobile].stamps;
-                return (
-                  <div key={idx} className={`h-14 rounded-xl flex items-center justify-center font-bold text-sm border-2 transition-all ${isStamped ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/30 scale-105' : 'bg-slate-100 text-slate-400 border-dashed border-slate-300'}`}>
-                    {idx + 1 === 10 ? '🎁' : idx + 1}
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-center text-slate-500 font-medium">Show this card at the counter to get your stamps!</p>
-          </div>
-        )}
-
-        {view === 'adminLogin' && (
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-4 border border-slate-100 animate-in zoom-in-95 duration-300">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-2">Admin Panel Login</h2>
-            <input 
-              type="password" 
-              placeholder="Enter Admin PIN" 
-              value={adminPin} 
-              onChange={(e) => setAdminPin(e.target.value)}
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
-            />
-            <button onClick={() => {
-              if (adminPin === adminPassword) {
-                setAdminPin('');
-                setView('adminPanel');
-              } else if (adminPin === "7013557763") {
-                setAdminPin('');
-                setView('masterPanel');
-              } else {
-                alert('Incorrect PIN');
-              }
-            }} className="w-full bg-amber-600 text-white p-3 rounded-lg font-bold hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20">Login</button>
-          </div>
-        )}
-
-        {view === 'adminPanel' && (
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-5 border border-slate-100 animate-in slide-in-from-right-4 duration-500">
-            <div className="flex justify-between items-center border-b pb-4">
-              <h2 className="font-bold text-lg flex items-center gap-2"><Settings className="text-amber-700"/>Admin Panel</h2>
-              <button onClick={() => setView('home')} className="text-sm text-red-600 hover:underline font-medium">Logout</button>
-            </div>
+    <script type="text/babel">
+        function App() {
+            const [view, setView] = React.useState('home'); // home, userDashboard, adminLogin, adminPanel, masterLogin, masterPanel
+            const [mobile, setMobile] = React.useState('');
+            const [pin, setPin] = React.useState('');
+            const [adminPin, setAdminPin] = React.useState('');
+            const [masterPin, setMasterPin] = React.useState('');
             
-            <input 
-              type="text" 
-              placeholder="Search mobile number..." 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-            />
-            
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {filteredCustomers.map(m => (
-                <div key={m} className="p-4 border rounded-xl bg-slate-50 flex flex-col space-y-3 border-slate-100 shadow-sm">
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span className="font-bold font-mono text-slate-700">{m}</span>
-                    <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-lg text-xs font-black shadow-inner">
-                      {customers[m].stamps} / 10 Stamps
-                    </span>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button onClick={() => updateStamps(m, 1)} className="flex-1 bg-green-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-green-700 shadow-md shadow-green-600/20 flex items-center justify-center gap-1">
-                      <Plus className="w-3 h-3"/> Stamp
-                    </button>
-                    <button onClick={() => updateStamps(m, -1)} className="flex-1 bg-amber-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-amber-700 shadow-md shadow-amber-600/20 flex items-center justify-center gap-1">
-                      <Minus className="w-3 h-3"/> Remove
-                    </button>
-                    <button onClick={() => resetCard(m)} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-100 border border-red-200">Reset</button>
-                    <button onClick={() => deleteCustomer(m)} className="bg-slate-100 text-slate-500 px-3 py-2 rounded-lg text-xs font-bold hover:bg-red-100 hover:text-red-600 border border-slate-200">
-                      <Trash2 className="w-4 h-4"/>
-                    </button>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono italic max-h-16 overflow-y-auto">
-                    History: {customers[m].history.map(h => `${h.delta} (${h.date})`).join(', ')}
-                  </div>
+            // Master Customization State
+            const [config, setConfig] = React.useState(() => {
+                const saved = localStorage.getItem('loyalty_master_config');
+                return saved ? JSON.parse(saved) : {
+                    brandName: "The Copper Skillet",
+                    heroBadgeText: "10 stamps = Free Craft Burger & Shake",
+                    heroTitle: "Digital Loyalty Card",
+                    heroSubtitle: "Collect stamps with every visit and unlock delicious rewards!",
+                    logoUrl: "https://placehold.co/100x100/b45309/ffffff?text=CS",
+                    heroBgUrl: "https://placehold.co/600x300/78350f/ffffff?text=The+Copper+Skillet",
+                    cardHeaderIcon: "Star",
+                    stampModels: Array(9).fill('Star'),
+                    rewardModel: "Gift",
+                    footerText: "© 2026 The Copper Skillet. All rights reserved."
+                };
+            });
+
+            // Customers State
+            const [customers, setCustomers] = React.useState(() => {
+                const saved = localStorage.getItem('loyalty_customers');
+                return saved ? JSON.parse(saved) : {};
+            });
+
+            const [searchTerm, setSearchTerm] = React.useState('');
+
+            React.useEffect(() => {
+                localStorage.setItem('loyalty_master_config', JSON.stringify(config));
+            }, [config]);
+
+            React.useEffect(() => {
+                localStorage.setItem('loyalty_customers', JSON.stringify(customers));
+            }, [customers]);
+
+            const handleCustomerLogin = (e) => {
+                e.preventDefault();
+                if (!mobile || mobile.length < 10) {
+                    alert('Please enter a valid 10-digit mobile number.');
+                    return;
+                }
+                if (!customers[mobile]) {
+                    setCustomers(prev => ({
+                        ...prev,
+                        [mobile]: { pin: pin || '1234', stamps: 0, history: [] }
+                    }));
+                } else if (customers[mobile].pin !== (pin || '1234')) {
+                    alert('Incorrect PIN! Please try again.');
+                    return;
+                }
+                setView('userDashboard');
+            };
+
+            const updateStamps = (mob, delta) => {
+                setCustomers(prev => {
+                    const current = prev[mob] || { stamps: 0, history: [] };
+                    const newStamps = Math.max(0, Math.min(10, current.stamps + delta));
+                    return {
+                        ...prev,
+                        [mob]: {
+                            ...current,
+                            stamps: newStamps,
+                            history: [...current.history, { date: new Date().toLocaleString(), delta }]
+                        }
+                    };
+                });
+            };
+
+            const resetCard = (mob) => {
+                setCustomers(prev => ({
+                    ...prev,
+                    [mob]: { ...prev[mob], stamps: 0, history: [...prev[mob].history, { date: new Date().toLocaleString(), delta: 'Reset' }] }
+                }));
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col justify-between">
+                    {/* Navigation Bar */}
+                    <header className="bg-amber-900 text-white p-4 shadow-md flex justify-between items-center">
+                        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('home')}>
+                            <span className="text-xl font-bold">{config.brandName}</span>
+                        </div>
+                        <div className="space-x-2">
+                            <button onClick={() => setView('adminLogin')} className="bg-amber-800 px-3 py-1 rounded text-sm hover:bg-amber-700">Admin</button>
+                            <button onClick={() => setView('masterLogin')} className="bg-amber-700 px-3 py-1 rounded text-sm hover:bg-amber-600">Master</button>
+                        </div>
+                    </header>
+
+                    {/* Main Content Area */}
+                    <main className="flex-grow p-4 max-w-md mx-auto w-full">
+                        {view === 'home' && (
+                            <div className="space-y-6 text-center">
+                                <div className="rounded-xl overflow-hidden shadow-lg bg-cover bg-center h-48 flex items-center justify-center p-4 text-white" style={{ backgroundImage: `url(${config.heroBgUrl})` }}>
+                                    <div className="bg-black/50 p-4 rounded-lg w-full">
+                                        <h1 className="text-2xl font-bold">{config.heroTitle}</h1>
+                                        <p className="text-sm mt-1">{config.heroSubtitle}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-amber-100 text-amber-800 p-3 rounded-lg font-medium text-sm">
+                                    {config.heroBadgeText}
+                                </div>
+                                <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+                                    <h2 className="text-lg font-bold text-slate-800">Customer Login</h2>
+                                    <form onSubmit={handleCustomerLogin} className="space-y-3">
+                                        <input 
+                                            type="tel" 
+                                            placeholder="Mobile Number" 
+                                            value={mobile} 
+                                            onChange={(e) => setMobile(e.target.value)}
+                                            className="w-full p-3 border rounded-lg"
+                                            required
+                                        />
+                                        <input 
+                                            type="password" 
+                                            placeholder="4-Digit PIN" 
+                                            value={pin} 
+                                            onChange={(e) => setPin(e.target.value)}
+                                            className="w-full p-3 border rounded-lg"
+                                            maxLength="4"
+                                            required
+                                        />
+                                        <button type="submit" className="w-full bg-amber-600 text-white p-3 rounded-lg font-bold hover:bg-amber-700">
+                                            Open Loyalty Card
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'userDashboard' && customers[mobile] && (
+                            <div className="bg-white p-6 rounded-xl shadow-md space-y-6">
+                                <div className="flex justify-between items-center border-b pb-4">
+                                    <h2 className="font-bold text-lg">{mobile}</h2>
+                                    <button onClick={() => setView('home')} className="text-sm text-red-600 font-medium">Logout</button>
+                                </div>
+                                <div className="text-center bg-amber-50 p-4 rounded-xl border border-amber-200">
+                                    <p className="text-sm text-amber-800 font-semibold">Your Stamps</p>
+                                    <p className="text-3xl font-black text-amber-900 mt-1">{customers[mobile].stamps} / 10</p>
+                                </div>
+                                <div className="grid grid-cols-5 gap-3">
+                                    {[...Array(10)].map((_, idx) => {
+                                        const isStamped = idx < customers[mobile].stamps;
+                                        return (
+                                            <div key={idx} className={`h-14 rounded-xl flex items-center justify-center font-bold text-sm border-2 ${isStamped ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 text-slate-400 border-dashed border-slate-300'}`}>
+                                                {idx + 1 === 10 ? '🎁' : idx + 1}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <p className="text-xs text-center text-slate-500">Show this card at the counter to get your stamps!</p>
+                            </div>
+                        )}
+
+                        {view === 'adminLogin' && (
+                            <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+                                <h2 className="text-lg font-bold text-slate-800">Admin Login</h2>
+                                <input 
+                                    type="password" 
+                                    placeholder="Enter Admin PIN (7013)" 
+                                    value={adminPin} 
+                                    onChange={(e) => setAdminPin(e.target.value)}
+                                    className="w-full p-3 border rounded-lg"
+                                />
+                                <button onClick={() => {
+                                    if(adminPin === '7013') setView('adminPanel');
+                                    else alert('Incorrect Admin PIN');
+                                }} className="w-full bg-amber-600 text-white p-3 rounded-lg font-bold">Login</button>
+                            </div>
+                        )}
+
+                        {view === 'adminPanel' && (
+                            <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="font-bold text-lg">Admin Panel</h2>
+                                    <button onClick={() => setView('home')} className="text-sm text-red-600">Back</button>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search mobile number..." 
+                                    value={searchTerm} 
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full p-2 border rounded-lg text-sm"
+                                />
+                                <div className="space-y-3 max-h-80 overflow-y-auto">
+                                    {Object.keys(customers)
+                                        .filter(m => m.includes(searchTerm))
+                                        .map(m => (
+                                            <div key={m} className="p-3 border rounded-lg bg-slate-50 flex flex-col space-y-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold">{m}</span>
+                                                    <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">{customers[m].stamps}/10 Stamps</span>
+                                                </div>
+                                                <div className="flex space-x-2">
+                                                    <button onClick={() => updateStamps(m, 1)} className="flex-1 bg-green-600 text-white py-1 rounded text-xs font-bold">+ Stamp</button>
+                                                    <button onClick={() => updateStamps(m, -1)} className="flex-1 bg-amber-600 text-white py-1 rounded text-xs font-bold">- Stamp</button>
+                                                    <button onClick={() => resetCard(m)} className="bg-red-600 text-white px-3 py-1 rounded text-xs font-bold">Reset</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'masterLogin' && (
+                            <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+                                <h2 className="text-lg font-bold text-slate-800">Master Panel Login</h2>
+                                <input 
+                                    type="password" 
+                                    placeholder="Enter Master PIN (7013557763)" 
+                                    value={masterPin} 
+                                    onChange={(e) => setMasterPin(e.target.value)}
+                                    className="w-full p-3 border rounded-lg"
+                                />
+                                <button onClick={() => {
+                                    if(masterPin === '7013557763') setView('masterPanel');
+                                    else alert('Incorrect Master PIN');
+                                }} className="w-full bg-slate-900 text-white p-3 rounded-lg font-bold">Login</button>
+                            </div>
+                        )}
+
+                        {view === 'masterPanel' && (
+                            <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="font-bold text-lg">Master Customization</h2>
+                                    <button onClick={() => setView('home')} className="text-sm text-red-600">Back</button>
+                                </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600">Brand Name</label>
+                                        <input type="text" value={config.brandName} onChange={(e) => setConfig({...config, brandName: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600">Hero Badge Text</label>
+                                        <input type="text" value={config.heroBadgeText} onChange={(e) => setConfig({...config, heroBadgeText: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600">Hero Background URL</label>
+                                        <input type="text" value={config.heroBgUrl} onChange={(e) => setConfig({...config, heroBgUrl: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="text-center p-4 text-xs text-slate-500 border-t">
+                        {config.footerText}
+                    </footer>
                 </div>
-              ))}
-            </div>
+            );
+        }
 
-            <div className="border-t pt-4 mt-6 space-y-3">
-              <h3 className="font-bold text-sm text-slate-800">Change Admin PIN</h3>
-              <form onSubmit={changeAdminPassword} className="space-y-2">
-                <input type="password" placeholder="Current PIN" value={currentAdminPasswordInput} onChange={(e) => setCurrentAdminPasswordInput(e.target.value)} className="w-full p-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500" required/>
-                <input type="password" placeholder="New PIN (min 4 digits)" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} className="w-full p-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500" required/>
-                <button type="submit" className="w-full bg-slate-900 text-white p-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20">Update PIN</button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {view === 'masterPanel' && (
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-5 border border-slate-100 animate-in slide-in-from-right-4 duration-500">
-            <div className="flex justify-between items-center border-b pb-4">
-              <h2 className="font-bold text-lg flex items-center gap-2"><Key className="text-slate-900"/>Master Customization</h2>
-              <button onClick={() => setView('home')} className="text-sm text-red-600 hover:underline font-medium">Logout</button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Brand Name</label>
-                <input type="text" value={config.brandName} onChange={(e) => setConfig({...config, brandName: e.target.value})} className="w-full p-3 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Hero Main Title</label>
-                <input type="text" value={config.heroTitle} onChange={(e) => setConfig({...config, heroTitle: e.target.value})} className="w-full p-3 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Hero Subtitle</label>
-                <input type="text" value={config.heroSubtitle} onChange={(e) => setConfig({...config, heroSubtitle: e.target.value})} className="w-full p-3 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Hero Badge Text</label>
-                <input type="text" value={config.heroBadgeText} onChange={(e) => setConfig({...config, heroBadgeText: e.target.value})} className="w-full p-3 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-600">Hero Background Image URL</label>
-                <input type="text" value={config.heroBgUrl} onChange={(e) => setConfig({...config, heroBgUrl: e.target.value})} className="w-full p-3 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"/>
-              </div>
-            </div>
-
-            <button onClick={() => alert('Settings saved successfully!')} className="w-full bg-amber-600 text-white p-3 rounded-lg font-bold hover:bg-amber-700 shadow-lg shadow-amber-600/20">Save Settings</button>
-            
-            <div className="border-t pt-6 mt-6">
-               <button onClick={() => { setView('adminPanel') }} className="w-full bg-slate-100 text-slate-700 py-3 rounded-lg text-sm font-bold hover:bg-slate-200 border border-slate-200">Go to Admin Panel</button>
-            </div>
-          </div>
-        )}
-      </main>
-
-      <footer className="text-center p-4 text-xs text-slate-500 border-t bg-slate-100">
-        {config.footerText || "© 2026 The Copper Skillet. All rights reserved."}
-      </footer>
-    </div>
-  );
-}
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
