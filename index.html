@@ -17,7 +17,7 @@
 
     <script type="text/babel">
         function App() {
-            const [view, setView] = React.useState('home'); // home, userDashboard, loginModal, adminPanel, masterPanel
+            const [view, setView] = React.useState('home'); 
             const [mobile, setMobile] = React.useState('');
             const [pin, setPin] = React.useState('');
             const [mobileError, setMobileError] = React.useState('');
@@ -27,7 +27,6 @@
             const [currentAdminPassword, setCurrentAdminPassword] = React.useState('');
             const [newAdminPassword, setNewAdminPassword] = React.useState('');
 
-            // Master Customization State
             const [config, setConfig] = React.useState(() => {
                 const saved = localStorage.getItem('loyalty_master_config');
                 return saved ? JSON.parse(saved) : {
@@ -41,7 +40,6 @@
                 };
             });
 
-            // Customers State
             const [customers, setCustomers] = React.useState(() => {
                 const saved = localStorage.getItem('loyalty_customers');
                 return saved ? JSON.parse(saved) : {};
@@ -156,7 +154,6 @@
 
             return (
                 <div className="min-h-screen flex flex-col justify-between">
-                    {/* Navigation Bar */}
                     <header className="bg-amber-900 text-white p-4 shadow-md flex justify-between items-center">
                         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setView('home')}>
                             <img src={config.logoUrl} alt="Logo" className="w-10 h-10 rounded-full object-cover border-2 border-white"/>
@@ -176,7 +173,6 @@
                         </div>
                     </header>
 
-                    {/* Main Content Area */}
                     <main className="flex-grow p-4 max-w-md mx-auto w-full">
                         {view === 'home' && (
                             <div className="space-y-6 text-center">
@@ -375,7 +371,6 @@
                         )}
                     </main>
 
-                    {/* Footer */}
                     <footer className="text-center p-4 text-xs text-slate-500 border-t">
                         {config.footerText}
                     </footer>
@@ -383,7 +378,7 @@
             );
         }
 
-        const root = ReactDOM.createRoot(default = document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
