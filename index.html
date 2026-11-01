@@ -1,385 +1,929 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Rewards - Digital Loyalty Card</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body class="bg-slate-50 text-slate-900 font-sans">
-    <div id="root"></div>
+```react
+import React, { useState, useEffect } from 'react';
+import { 
+  Phone, 
+  Lock, 
+  Gift, 
+  CheckCircle, 
+  ShieldCheck, 
+  Settings, 
+  Users, 
+  Trash2, 
+  Plus, 
+  Minus, 
+  Search, 
+  Sparkles, 
+  LogOut, 
+  Edit3, 
+  RotateCcw,
+  Store,
+  Award,
+  Smartphone,
+  ChevronRight,
+  Shield,
+  Palette,
+  Eye,
+  Check
+} from 'lucide-react';
 
-    <script type="text/babel">
-        function App() {
-            const [view, setView] = React.useState('home'); 
-            const [mobile, setMobile] = React.useState('');
-            const [pin, setPin] = React.useState('');
-            const [mobileError, setMobileError] = React.useState('');
-            
-            const [secretInput, setSecretInput] = React.useState('');
-            const [adminPinConfig, setAdminPinConfig] = React.useState('7013');
-            const [currentAdminPassword, setCurrentAdminPassword] = React.useState('');
-            const [newAdminPassword, setNewAdminPassword] = React.useState('');
+// Default App Settings (Dynamic Branding)
+const DEFAULT_SETTINGS = {
+  brandName: "Artisan Brew & Bakery",
+  tagline: "Your daily warmth in every cup & bite",
+  bannerImage: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
+  rewardTitle: "Free Specialty Coffee & Pastry",
+  rewardDescription: "Collect 10 stamps to claim your artisan treat of choice!",
+  adminPasscode: "9985656800", // Customizable Admin Passcode
+  totalStampsRequired: 10,
+  accentColor: "amber", // amber, rose, emerald, indigo
+};
 
-            const [config, setConfig] = React.useState(() => {
-                const saved = localStorage.getItem('loyalty_master_config');
-                return saved ? JSON.parse(saved) : {
-                    brandName: "The Copper Skillet",
-                    heroBadgeText: "10 stamps = Free Craft Burger & Shake",
-                    heroTitle: "Digital Loyalty Card",
-                    heroSubtitle: "Collect stamps with every visit and unlock delicious rewards!",
-                    logoUrl: "https://placehold.co/100x100/b45309/ffffff?text=CS",
-                    heroBgUrl: "https://placehold.co/600x300/78350f/ffffff?text=The+Copper+Skillet",
-                    footerText: "© 2026 The Copper Skillet. All rights reserved."
-                };
-            });
+// Master Passcode (Hardcoded securely)
+const MASTER_PASSCODE = "7013557763";
 
-            const [customers, setCustomers] = React.useState(() => {
-                const saved = localStorage.getItem('loyalty_customers');
-                return saved ? JSON.parse(saved) : {};
-            });
+export default function App() {
+  // Navigation & View State
+  const [currentView, setCurrentView] = useState('user-login'); // 'user-login', 'user-dashboard', 'admin-login', 'admin-dashboard'
+  
+  // App Dynamic Customization Settings State
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('loyalty_app_settings');
+    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+  });
 
-            const [searchTerm, setSearchTerm] = React.useState('');
+  // User Accounts Database (Keyed by Mobile Number)
+  const [customers, setCustomers] = useState(() => {
+    const saved = localStorage.getItem('loyalty_customers_db');
+    if (saved) return JSON.parse(saved);
+    // Seed data
+    return {
+      "9876543210": { mobile: "9876543210", stamps: 7, joinedDate: "2025-01-15", lastVisit: "2025-05-10" },
+      "5551234567": { mobile: "5551234567", stamps: 10, joinedDate: "2025-02-01", lastVisit: "2025-05-18" }
+    };
+  });
 
-            React.useEffect(() => {
-                localStorage.setItem('loyalty_master_config', JSON.stringify(config));
-            }, [config]);
+  // Active Logged-in Customer
+  const [activeUserMobile, setActiveUserMobile] = useState('');
+  const [loginInput, setLoginInput] = useState('');
+  const [loginError, setLoginError] = useState('');
 
-            React.useEffect(() => {
-                localStorage.setItem('loyalty_customers', JSON.stringify(customers));
-            }, [customers]);
+  // Admin Auth State
+  const [adminPasscodeInput, setAdminPasscodeInput] = useState('');
+  const [adminAuthType, setAdminAuthType] = useState(null); // 'admin' | 'master' | null
+  const [adminAuthError, setAdminAuthError] = useState('');
 
-            const validateMobile = (num) => {
-                const regex = /^[6-9]\d{9}$/;
-                return regex.test(num);
-            };
+  // Admin Panel Tab
+  const [adminTab, setAdminTab] = useState('customers'); // 'customers' | 'branding' | 'security'
 
-            const handleMobileChange = (e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                setMobile(val);
-                if (val.length > 0 && !validateMobile(val)) {
-                    setMobileError('ప్లీజ్ ఎంటర్ ఏ వాలిడ్ మొబైల్ నంబర్');
-                } else {
-                    setMobileError('');
-                }
-            };
+  // Admin Customer Search & Actions
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingSettings, setEditingSettings] = useState({ ...settings });
+  const [passcodeChangeInput, setPasscodeChangeInput] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
 
-            const handleCustomerLogin = (e) => {
-                e.preventDefault();
-                if (!validateMobile(mobile)) {
-                    setMobileError('ప్లీజ్ ఎంటర్ ఏ వాలిడ్ మొబైల్ నంబర్');
-                    return;
-                }
-                if (!pin || pin.length !== 4) {
-                    alert('దయచేసి 4 అంకెల పిన్ నంబర్ ఎంటర్ చేయండి.');
-                    return;
-                }
-                if (!customers[mobile]) {
-                    setCustomers(prev => ({
-                        ...prev,
-                        [mobile]: { pin: pin, stamps: 0, history: [] }
-                    }));
-                } else if (customers[mobile].pin !== pin) {
-                    alert('తప్పు పిన్ నంబర్! దయచేసి మళ్లీ ప్రయత్నించండి.');
-                    return;
-                }
-                setView('userDashboard');
-            };
+  // Sync state to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('loyalty_app_settings', JSON.stringify(settings));
+  }, [settings]);
 
-            const updateStamps = (mob, delta) => {
-                setCustomers(prev => {
-                    const current = prev[mob] || { stamps: 0, history: [] };
-                    const newStamps = Math.max(0, Math.min(10, current.stamps + delta));
-                    return {
-                        ...prev,
-                        [mob]: {
-                            ...current,
-                            stamps: newStamps,
-                            history: [...current.history, { date: new Date().toLocaleString(), delta }]
-                        }
-                    };
-                });
-            };
+  useEffect(() => {
+    localStorage.setItem('loyalty_customers_db', JSON.stringify(customers));
+  }, [customers]);
 
-            const resetCard = (mob) => {
-                setCustomers(prev => ({
-                    ...prev,
-                    [mob]: { ...prev[mob], stamps: 0, history: [...prev[mob].history, { date: new Date().toLocaleString(), delta: 'Reset' }] }
-                }));
-            };
+  // Show Toast Notification
+  const triggerToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
 
-            const deleteCustomer = (mob) => {
-                if (confirm(`మీరు ఖచ్చితంగా ${mob} నంబర్‌ను పర్మనెంట్‌గా డిలీట్ చేయాలనుకుంటున్నారా?`)) {
-                    setCustomers(prev => {
-                        const updated = { ...prev };
-                        delete updated[mob];
-                        return updated;
-                    });
-                }
-            };
+  // --- USER AUTH HANDLERS ---
+  const handleUserLogin = (e) => {
+    e.preventDefault();
+    const cleanNum = loginInput.replace(/\D/g, '');
+    if (cleanNum.length < 7 || cleanNum.length > 15) {
+      setLoginError('Please enter a valid mobile number (7-15 digits).');
+      return;
+    }
+    setLoginError('');
 
-            const handleSecretLogin = () => {
-                if (secretInput === '7013557763') {
-                    setView('masterPanel');
-                    setSecretInput('');
-                } else if (secretInput === adminPinConfig) {
-                    setView('adminPanel');
-                    setSecretInput('');
-                } else {
-                    alert('తప్పు పాస్‌కోడ్!');
-                }
-            };
+    // Fetch existing or register fresh record
+    if (!customers[cleanNum]) {
+      const newRecord = {
+        mobile: cleanNum,
+        stamps: 0,
+        joinedDate: new Date().toISOString().split('T')[0],
+        lastVisit: new Date().toISOString().split('T')[0]
+      };
+      setCustomers(prev => ({ ...prev, [cleanNum]: newRecord }));
+      triggerToast('Welcome! Your new digital card has been created.');
+    } else {
+      // Update last visit date
+      setCustomers(prev => ({
+        ...prev,
+        [cleanNum]: { ...prev[cleanNum], lastVisit: new Date().toISOString().split('T')[0] }
+      }));
+    }
 
-            const handleUpdateAdminPassword = (e) => {
-                e.preventDefault();
-                if (currentAdminPassword !== adminPinConfig) {
-                    alert('ప్రస్తుత పాస్‌వర్డ్ తప్పుగా ఉంది!');
-                    return;
-                }
-                if (!newAdminPassword || newAdminPassword.length < 4) {
-                    alert('కొత్త పాస్‌వర్డ్ కనీసం 4 అంకెలు ఉండాలి.');
-                    return;
-                }
-                setAdminPinConfig(newAdminPassword);
-                setCurrentAdminPassword('');
-                setNewAdminPassword('');
-                alert('అడ్మిన్ పాస్‌వర్డ్ విజయవంతంగా మార్చబడింది!');
-            };
+    setActiveUserMobile(cleanNum);
+    setCurrentView('user-dashboard');
+    setLoginInput('');
+  };
 
-            return (
-                <div className="min-h-screen flex flex-col justify-between">
-                    <header className="bg-amber-900 text-white p-4 shadow-md flex justify-between items-center">
-                        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setView('home')}>
-                            <img src={config.logoUrl} alt="Logo" className="w-10 h-10 rounded-full object-cover border-2 border-white"/>
-                            <div>
-                                <span className="text-lg font-bold block">{config.brandName}</span>
-                                <span className="text-xs text-amber-200 block">Digital Loyalty Card</span>
-                            </div>
-                        </div>
-                        <div>
-                            <button 
-                                onClick={() => setView('loginModal')} 
-                                className="w-9 h-9 rounded-full bg-amber-800 border border-amber-600 flex items-center justify-center font-bold text-sm hover:bg-amber-700 shadow"
-                                title="Admin / Master Login"
-                            >
-                                A
-                            </button>
-                        </div>
-                    </header>
+  const handleUserLogout = () => {
+    setActiveUserMobile('');
+    setCurrentView('user-login');
+  };
 
-                    <main className="flex-grow p-4 max-w-md mx-auto w-full">
-                        {view === 'home' && (
-                            <div className="space-y-6 text-center">
-                                <div className="rounded-xl overflow-hidden shadow-lg bg-cover bg-center h-48 flex items-center justify-center p-4 text-white" style={{ backgroundImage: `url(${config.heroBgUrl})` }}>
-                                    <div className="bg-black/50 p-4 rounded-lg w-full">
-                                        <h1 className="text-2xl font-bold">{config.heroTitle}</h1>
-                                        <p className="text-sm mt-1">{config.heroSubtitle}</p>
-                                    </div>
-                                </div>
-                                <div className="bg-amber-100 text-amber-800 p-3 rounded-lg font-medium text-sm">
-                                    {config.heroBadgeText}
-                                </div>
-                                <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
-                                    <h2 className="text-lg font-bold text-slate-800">Customer Login</h2>
-                                    <form onSubmit={handleCustomerLogin} className="space-y-3 text-left">
-                                        <div>
-                                            <input 
-                                                type="tel" 
-                                                placeholder="Mobile Number (e.g. 9876543210)" 
-                                                value={mobile} 
-                                                onChange={handleMobileChange}
-                                                className="w-full p-3 border rounded-lg text-sm"
-                                                maxLength="10"
-                                                required
-                                            />
-                                            {mobileError && <p className="text-red-600 text-xs mt-1 font-semibold">{mobileError}</p>}
-                                        </div>
-                                        <div>
-                                            <input 
-                                                type="password" 
-                                                placeholder="4-Digit PIN" 
-                                                value={pin} 
-                                                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                                className="w-full p-3 border rounded-lg text-sm"
-                                                maxLength="4"
-                                                required
-                                            />
-                                        </div>
-                                        <button type="submit" className="w-full bg-amber-600 text-white p-3 rounded-lg font-bold hover:bg-amber-700 transition">
-                                            Open Loyalty Card
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        )}
+  // --- ADMIN AUTH HANDLERS ---
+  const handleAdminLogin = (e) => {
+    e.preventDefault();
+    setAdminAuthError('');
 
-                        {view === 'loginModal' && (
-                            <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-lg font-bold text-slate-800">Security Login</h2>
-                                    <button onClick={() => setView('home')} className="text-sm text-red-600 font-semibold">Back</button>
-                                </div>
-                                <p className="text-xs text-slate-500">అడ్మిన్ లేదా మాస్టర్ పాస్‌కోడ్ ఎంటర్ చేయండి:</p>
-                                <input 
-                                    type="password" 
-                                    placeholder="Enter Passcode..." 
-                                    value={secretInput} 
-                                    onChange={(e) => setSecretInput(e.target.value)}
-                                    className="w-full p-3 border rounded-lg text-sm"
-                                />
-                                <button onClick={handleSecretLogin} className="w-full bg-slate-900 text-white p-3 rounded-lg font-bold hover:bg-slate-800">
-                                    Login
-                                </button>
-                            </div>
-                        )}
+    if (adminPasscodeInput === MASTER_PASSCODE) {
+      setAdminAuthType('master');
+      setCurrentView('admin-dashboard');
+      setAdminPasscodeInput('');
+      triggerToast('Authenticated as Master Admin (Full Control)');
+    } else if (adminPasscodeInput === settings.adminPasscode) {
+      setAdminAuthType('admin');
+      setCurrentView('admin-dashboard');
+      setAdminPasscodeInput('');
+      triggerToast('Authenticated as Admin');
+    } else {
+      setAdminAuthError('Invalid passcode. Check your access credentials.');
+    }
+  };
 
-                        {view === 'userDashboard' && customers[mobile] && (
-                            <div className="bg-white p-6 rounded-xl shadow-md space-y-6">
-                                <div className="flex justify-between items-center border-b pb-4">
-                                    <h2 className="font-bold text-lg">{mobile}</h2>
-                                    <button onClick={() => setView('home')} className="text-sm text-red-600 font-medium">Logout</button>
-                                </div>
-                                <div className="text-center bg-amber-50 p-4 rounded-xl border border-amber-200">
-                                    <p className="text-sm text-amber-800 font-semibold">Your Stamps</p>
-                                    <p className="text-3xl font-black text-amber-900 mt-1">{customers[mobile].stamps} / 10</p>
-                                </div>
-                                <div className="grid grid-cols-5 gap-3">
-                                    {[...Array(10)].map((_, idx) => {
-                                        const isStamped = idx < customers[mobile].stamps;
-                                        return (
-                                            <div key={idx} className={`h-14 rounded-xl flex items-center justify-center font-bold text-sm border-2 ${isStamped ? 'bg-amber-600 text-white border-amber-600 shadow' : 'bg-slate-100 text-slate-400 border-dashed border-slate-300'}`}>
-                                                {idx + 1 === 10 ? '🎁' : `⭐ ${idx + 1}`}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <p className="text-xs text-center text-slate-500">Show this card at the counter to get your stamps!</p>
-                            </div>
-                        )}
+  const handleAdminLogout = () => {
+    setAdminAuthType(null);
+    setAdminPasscodeInput('');
+    setCurrentView('user-login');
+  };
 
-                        {view === 'adminPanel' && (
-                            <div className="bg-white p-6 rounded-xl shadow-md space-y-5">
-                                <div className="flex justify-between items-center border-b pb-3">
-                                    <h2 className="font-bold text-lg text-amber-900">Admin Panel</h2>
-                                    <button onClick={() => setView('home')} className="text-sm text-red-600 font-semibold">Back to Home</button>
-                                </div>
-                                
-                                <input 
-                                    type="text" 
-                                    placeholder="Search mobile number..." 
-                                    value={searchTerm} 
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full p-2 border rounded-lg text-sm"
-                                />
+  // --- STAMP OPERATIONS ---
+  const updateStamps = (mobile, delta) => {
+    setCustomers(prev => {
+      const user = prev[mobile];
+      if (!user) return prev;
+      const newStamps = Math.max(0, Math.min(settings.totalStampsRequired, user.stamps + delta));
+      return {
+        ...prev,
+        [mobile]: { ...user, stamps: newStamps, lastVisit: new Date().toISOString().split('T')[0] }
+      };
+    });
+    triggerToast(`Stamps updated for customer #${mobile}`);
+  };
 
-                                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                                    {Object.keys(customers).length === 0 ? (
-                                        <p className="text-xs text-center text-slate-400 py-4">యూజర్లు ఎవరూ లేరు.</p>
-                                    ) : (
-                                        Object.keys(customers)
-                                            .filter(m => m.includes(searchTerm))
-                                            .map(m => (
-                                                <div key={m} className="p-3 border rounded-lg bg-slate-50 flex flex-col space-y-2 shadow-sm">
-                                                    <div className="flex justify-between items-center">
-                                                        <div>
-                                                            <span className="font-bold text-sm text-slate-800">{m}</span>
-                                                            <span className="text-xs text-slate-500 ml-2">(PIN: {customers[m].pin})</span>
-                                                        </div>
-                                                        <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">{customers[m].stamps}/10 Stamps</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-4 gap-1 pt-1">
-                                                        <button onClick={() => updateStamps(m, 1)} className="bg-green-600 text-white py-1.5 rounded text-xs font-bold hover:bg-green-700">+ Stamp</button>
-                                                        <button onClick={() => updateStamps(m, -1)} className="bg-amber-600 text-white py-1.5 rounded text-xs font-bold hover:bg-amber-700">- Stamp</button>
-                                                        <button onClick={() => resetCard(m)} className="bg-orange-500 text-white py-1.5 rounded text-xs font-bold hover:bg-orange-600">Reset</button>
-                                                        <button onClick={() => deleteCustomer(m)} className="bg-red-600 text-white py-1.5 rounded text-xs font-bold hover:bg-red-700">Delete</button>
-                                                    </div>
-                                                </div>
-                                            ))
-                                    )}
-                                </div>
+  const redeemReward = (mobile) => {
+    setCustomers(prev => {
+      const user = prev[mobile];
+      if (!user || user.stamps < settings.totalStampsRequired) return prev;
+      return {
+        ...prev,
+        [mobile]: { ...user, stamps: 0 }
+      };
+    });
+    triggerToast(`Reward redeemed for customer #${mobile}! Reset to 0 stamps.`);
+  };
 
-                                <div className="border-t pt-4 space-y-3">
-                                    <h3 className="text-sm font-bold text-slate-700">Change Admin Password</h3>
-                                    <form onSubmit={handleUpdateAdminPassword} className="space-y-2">
-                                        <input 
-                                            type="password" 
-                                            placeholder="Current Admin Password" 
-                                            value={currentAdminPassword} 
-                                            onChange={(e) => setCurrentAdminPassword(e.target.value)}
-                                            className="w-full p-2 border rounded text-xs"
-                                            required
-                                        />
-                                        <input 
-                                            type="password" 
-                                            placeholder="New Admin Password (min 4 chars)" 
-                                            value={newAdminPassword} 
-                                            onChange={(e) => setNewAdminPassword(e.target.value)}
-                                            className="w-full p-2 border rounded text-xs"
-                                            required
-                                        />
-                                        <button type="submit" className="w-full bg-slate-800 text-white p-2 rounded text-xs font-bold hover:bg-slate-900">
-                                            Update Password
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        )}
+  const deleteCustomer = (mobile) => {
+    if (confirm(`Are you sure you want to permanently delete record for ${mobile}? This action cannot be undone.`)) {
+      setCustomers(prev => {
+        const copy = { ...prev };
+        delete copy[mobile];
+        return copy;
+      });
+      // If deleted customer is currently logged in user, boot them
+      if (activeUserMobile === mobile) {
+        setActiveUserMobile('');
+        setCurrentView('user-login');
+      }
+      triggerToast(`Customer ${mobile} record permanently erased.`);
+    }
+  };
 
-                        {view === 'masterPanel' && (
-                            <div className="bg-white p-6 rounded-xl shadow-md space-y-5">
-                                <div className="flex justify-between items-center border-b pb-3">
-                                    <h2 className="font-bold text-lg text-slate-900">Master Panel (Customization)</h2>
-                                    <button onClick={() => setView('home')} className="text-sm text-red-600 font-semibold">Back</button>
-                                </div>
-                                <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-600">Brand Name</label>
-                                        <input type="text" value={config.brandName} onChange={(e) => setConfig({...config, brandName: e.target.value})} className="w-full p-2 border rounded text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-600">Logo Image URL</label>
-                                        <input type="text" value={config.logoUrl} onChange={(e) => setConfig({...config, logoUrl: e.target.value})} className="w-full p-2 border rounded text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-600">Hero Title</label>
-                                        <input type="text" value={config.heroTitle} onChange={(e) => setConfig({...config, heroTitle: e.target.value})} className="w-full p-2 border rounded text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-600">Hero Subtitle</label>
-                                        <input type="text" value={config.heroSubtitle} onChange={(e) => setConfig({...config, heroSubtitle: e.target.value})} className="w-full p-2 border rounded text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-600">Hero Badge Text</label>
-                                        <input type="text" value={config.heroBadgeText} onChange={(e) => setConfig({...config, heroBadgeText: e.target.value})} className="w-full p-2 border rounded text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-600">Hero Background Image URL</label>
-                                        <input type="text" value={config.heroBgUrl} onChange={(e) => setConfig({...config, heroBgUrl: e.target.value})} className="w-full p-2 border rounded text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-600">Footer Text</label>
-                                        <input type="text" value={config.footerText} onChange={(e) => setConfig({...config, footerText: e.target.value})} className="w-full p-2 border rounded text-sm"/>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </main>
+  // Save Settings Customization
+  const handleSaveSettings = (e) => {
+    e.preventDefault();
+    setSettings(editingSettings);
+    triggerToast('Brand settings updated successfully!');
+  };
 
-                    <footer className="text-center p-4 text-xs text-slate-500 border-t">
-                        {config.footerText}
-                    </footer>
+  // Change Admin Passcode (Passcode 1)
+  const handleChangeAdminPasscode = (e) => {
+    e.preventDefault();
+    if (passcodeChangeInput.trim().length < 4) {
+      alert('Passcode must be at least 4 digits/characters long.');
+      return;
+    }
+    setSettings(prev => ({ ...prev, adminPasscode: passcodeChangeInput.trim() }));
+    setPasscodeChangeInput('');
+    triggerToast('Customizable Admin Passcode updated!');
+  };
+
+  // Filtered Customer Search
+  const filteredCustomers = Object.values(customers).filter(c => 
+    c.mobile.includes(searchQuery.trim())
+  );
+
+  const activeUser = customers[activeUserMobile];
+
+  // Helper theme classes
+  const getAccentBg = () => {
+    switch (settings.accentColor) {
+      case 'rose': return 'bg-rose-600 hover:bg-rose-700 text-white';
+      case 'emerald': return 'bg-emerald-600 hover:bg-emerald-700 text-white';
+      case 'indigo': return 'bg-indigo-600 hover:bg-indigo-700 text-white';
+      default: return 'bg-amber-600 hover:bg-amber-700 text-white';
+    }
+  };
+
+  const getAccentBorder = () => {
+    switch (settings.accentColor) {
+      case 'rose': return 'border-rose-500 text-rose-600';
+      case 'emerald': return 'border-emerald-500 text-emerald-600';
+      case 'indigo': return 'border-indigo-500 text-indigo-600';
+      default: return 'border-amber-500 text-amber-600';
+    }
+  };
+
+  const getAccentRing = () => {
+    switch (settings.accentColor) {
+      case 'rose': return 'focus:ring-rose-500';
+      case 'emerald': return 'focus:ring-emerald-500';
+      case 'indigo': return 'focus:ring-indigo-500';
+      default: return 'focus:ring-amber-500';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col justify-between">
+      
+      {/* GLOBAL HEADER & VIEW SIMULATOR SWITCHER */}
+      <header className="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center space-x-2">
+            <Store className="w-6 h-6 text-amber-400" />
+            <span className="font-bold text-lg tracking-wide">{settings.brandName}</span>
+          </div>
+
+          {/* Quick Perspective Switcher for Testing */}
+          <div className="flex items-center space-x-1 sm:space-x-2 bg-slate-800 p-1 rounded-xl text-xs sm:text-sm">
+            <button
+              onClick={() => setCurrentView('user-login')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition ${
+                currentView === 'user-login' || currentView === 'user-dashboard'
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Customer View
+            </button>
+            <button
+              onClick={() => {
+                if (!adminAuthType) setCurrentView('admin-login');
+                else setCurrentView('admin-dashboard');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-medium transition ${
+                currentView === 'admin-login' || currentView === 'admin-dashboard'
+                  ? 'bg-slate-700 text-white font-bold shadow border border-slate-600'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Admin Panel {adminAuthType && `(${adminAuthType.toUpperCase()})`}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* TOAST NOTIFICATION CONTAINER */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center space-x-3 animate-bounce">
+          <Sparkles className="w-5 h-5 text-amber-400" />
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* MAIN CONTAINER */}
+      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center">
+
+        {/* ------------------------------------------------------------------ */}
+        {/* VIEW 1: USER MOBILE NUMBER LOGIN PAGE */}
+        {/* ------------------------------------------------------------------ */}
+        {currentView === 'user-login' && (
+          <div className="max-w-md mx-auto w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+            {/* Banner Image Header */}
+            <div className="h-44 bg-cover bg-center relative" style={{ backgroundImage: `url(${settings.bannerImage})` }}>
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/40 to-transparent flex flex-col justify-end p-6 text-white">
+                <h1 className="text-2xl font-bold">{settings.brandName}</h1>
+                <p className="text-xs text-slate-200 font-light mt-0.5">{settings.tagline}</p>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8">
+              <div className="mb-6 text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-600 mb-3">
+                  <Smartphone className="w-6 h-6" />
                 </div>
-            );
-        }
+                <h2 className="text-xl font-bold text-slate-900">Check Your Stamps</h2>
+                <p className="text-xs text-slate-500 mt-1">Enter your phone number to access your digital loyalty card</p>
+              </div>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+              <form onSubmit={handleUserLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Mobile Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 9876543210"
+                      value={loginInput}
+                      onChange={(e) => setLoginInput(e.target.value)}
+                      className={`w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 ${getAccentRing()} text-slate-900 font-medium transition`}
+                      required
+                    />
+                  </div>
+                  {loginError && <p className="text-xs text-rose-600 mt-1.5 font-medium">{loginError}</p>}
+                </div>
+
+                <button
+                  type="submit"
+                  className={`w-full py-3.5 px-4 rounded-xl font-semibold shadow-md flex items-center justify-center space-x-2 transition ${getAccentBg()}`}
+                >
+                  <span>Access Loyalty Card</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </form>
+
+              {/* Demo Quick Accounts */}
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <p className="text-xs text-slate-400 font-medium mb-3 text-center">Quick Demo Accounts:</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <button
+                    onClick={() => { setLoginInput('9876543210'); }}
+                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition border border-slate-200"
+                  >
+                    9876543210 (7 Stamps)
+                  </button>
+                  <button
+                    onClick={() => { setLoginInput('5551234567'); }}
+                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition border border-slate-200"
+                  >
+                    5551234567 (10 Stamps - Reward Ready)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* VIEW 2: USER LOYALTY CARD DASHBOARD */}
+        {/* ------------------------------------------------------------------ */}
+        {currentView === 'user-dashboard' && activeUser && (
+          <div className="max-w-md mx-auto w-full space-y-6">
+            
+            {/* Top User Status Header */}
+            <div className="flex items-center justify-between bg-white px-5 py-3 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
+                  {activeUser.mobile.slice(-2)}
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-medium">Logged in as</p>
+                  <p className="text-sm font-bold text-slate-800">+{activeUser.mobile}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleUserLogout}
+                className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100 transition"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* DIGITAL LOYALTY CARD COMPONENT */}
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+              {/* Card Header Branding */}
+              <div 
+                className="p-6 relative bg-cover bg-center text-white"
+                style={{ backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.95)), url(${settings.bannerImage})` }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-xl font-bold tracking-tight">{settings.brandName}</h2>
+                    <p className="text-xs text-slate-300 font-light">{settings.tagline}</p>
+                  </div>
+                  <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-amber-300 border border-white/20">
+                    VIP Pass
+                  </span>
+                </div>
+
+                <div className="mt-6 flex justify-between items-end">
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Your Stamp Progress</p>
+                    <p className="text-3xl font-extrabold text-white mt-0.5">
+                      {activeUser.stamps} <span className="text-lg font-normal text-slate-400">/ {settings.totalStampsRequired}</span>
+                    </p>
+                  </div>
+
+                  {activeUser.stamps >= settings.totalStampsRequired && (
+                    <div className="bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center space-x-1 animate-pulse shadow-lg">
+                      <Sparkles className="w-4 h-4" />
+                      <span>REWARD READY!</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Stamp Circles Matrix */}
+              <div className="p-6 bg-slate-50">
+                <div className="grid grid-cols-5 gap-3 sm:gap-4">
+                  {Array.from({ length: settings.totalStampsRequired }).map((_, idx) => {
+                    const isFilled = idx < activeUser.stamps;
+                    const isRewardItem = idx === settings.totalStampsRequired - 1;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-300 ${
+                          isFilled
+                            ? 'bg-amber-500 text-slate-950 shadow-md scale-105 border-2 border-amber-400'
+                            : 'bg-white text-slate-300 border-2 border-dashed border-slate-300'
+                        }`}
+                      >
+                        {isFilled ? (
+                          <div className="flex flex-col items-center justify-center">
+                            <CheckCircle className="w-7 h-7 stroke-[2.5]" />
+                            <span className="text-[10px] font-bold mt-0.5">#{idx + 1}</span>
+                          </div>
+                        ) : isRewardItem ? (
+                          <div className="flex flex-col items-center justify-center text-amber-500">
+                            <Gift className="w-6 h-6" />
+                            <span className="text-[9px] font-bold mt-0.5">FREE</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold text-slate-400">{idx + 1}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Reward Details Box */}
+              <div className="p-6 border-t border-slate-100 bg-white">
+                <div className="flex items-start space-x-3 bg-amber-50 border border-amber-200 p-4 rounded-2xl">
+                  <Award className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-900">{settings.rewardTitle}</h4>
+                    <p className="text-xs text-amber-700 mt-0.5">{settings.rewardDescription}</p>
+                  </div>
+                </div>
+
+                {activeUser.stamps >= settings.totalStampsRequired && (
+                  <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
+                    <p className="text-xs text-emerald-800 font-medium">Show this screen to cashier to redeem your reward!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* User Info Footnote */}
+            <div className="text-center text-xs text-slate-400">
+              <p>Stamps update in real-time when scanned by cashier.</p>
+              <p className="mt-1">Joined: {activeUser.joinedDate} • Last Visit: {activeUser.lastVisit}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* VIEW 3: ADMIN LOGIN ROUTE (DUAL PASSCODE AUTH) */}
+        {/* ------------------------------------------------------------------ */}
+        {currentView === 'admin-login' && (
+          <div className="max-w-md mx-auto w-full bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-200">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-900 text-amber-400 mb-3 shadow">
+                <Lock className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">Admin Authentication</h2>
+              <p className="text-xs text-slate-500 mt-1">Enter valid admin or master passcode to manage records</p>
+            </div>
+
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Passcode
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="Enter Passcode"
+                    value={adminPasscodeInput}
+                    onChange={(e) => setAdminPasscodeInput(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 text-slate-900 font-medium"
+                    required
+                  />
+                </div>
+                {adminAuthError && <p className="text-xs text-rose-600 mt-1.5 font-medium">{adminAuthError}</p>}
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow-md transition flex items-center justify-center space-x-2"
+              >
+                <span>Unlock Admin Portal</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            {/* Security Passcode Hints for Testing */}
+            <div className="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex items-center justify-between font-semibold text-slate-700 border-b border-slate-200 pb-2">
+                <span>Passcode Credentials for Testing:</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span>1. Admin Passcode (Customizable):</span>
+                <code className="bg-slate-200 px-2 py-0.5 rounded font-mono text-slate-900 font-bold">{settings.adminPasscode}</code>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span>2. Master Passcode (Hidden/Hardcoded):</span>
+                <code className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-mono font-bold">{MASTER_PASSCODE}</code>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* VIEW 4: ADMIN DASHBOARD (STAMPS, CUSTOMIZATION & SECURITY) */}
+        {/* ------------------------------------------------------------------ */}
+        {currentView === 'admin-dashboard' && (
+          <div className="w-full space-y-6">
+            
+            {/* Top Navigation & Status Bar */}
+            <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-lg flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <div className={`p-2.5 rounded-xl ${adminAuthType === 'master' ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-white'}`}>
+                  <Shield className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h2 className="text-lg font-bold">Admin Management Portal</h2>
+                    <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
+                      adminAuthType === 'master' ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-300'
+                    }`}>
+                      {adminAuthType === 'master' ? 'MASTER PRIVILEGES' : 'STANDARD ADMIN'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">Manage customer stamps, website customization, and security</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAdminLogout}
+                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2 rounded-xl transition flex items-center space-x-1 border border-slate-700"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Exit Admin</span>
+              </button>
+            </div>
+
+            {/* Admin Sub-Tabs */}
+            <div className="flex space-x-2 border-b border-slate-200 pb-2">
+              <button
+                onClick={() => setAdminTab('customers')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center space-x-2 ${
+                  adminTab === 'customers'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Customer Records ({Object.keys(customers).length})</span>
+              </button>
+
+              <button
+                onClick={() => setAdminTab('branding')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center space-x-2 ${
+                  adminTab === 'branding'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Palette className="w-4 h-4" />
+                <span>Website Customization</span>
+              </button>
+
+              <button
+                onClick={() => setAdminTab('security')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center space-x-2 ${
+                  adminTab === 'security'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Passcode & Security</span>
+              </button>
+            </div>
+
+            {/* TAB 1: CUSTOMER STAMP MANAGEMENT */}
+            {adminTab === 'customers' && (
+              <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-3">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by Mobile Number (e.g. 9876...)"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1 bg-transparent focus:outline-none text-slate-800 text-sm placeholder-slate-400 font-medium"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="text-xs text-slate-400 hover:text-slate-600">
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Customer List */}
+                <div className="grid gap-4">
+                  {filteredCustomers.length === 0 ? (
+                    <div className="bg-white p-8 rounded-2xl text-center border border-slate-200">
+                      <p className="text-slate-500 text-sm font-medium">No matching customer records found.</p>
+                    </div>
+                  ) : (
+                    filteredCustomers.map((customer) => (
+                      <div key={customer.mobile} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        
+                        {/* Customer Info */}
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-slate-900 text-base">+{customer.mobile}</span>
+                            {customer.stamps >= settings.totalStampsRequired && (
+                              <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                                Reward Ready
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">
+                            Joined: {customer.joinedDate} • Last Visit: {customer.lastVisit}
+                          </p>
+                          
+                          {/* Mini Visual Stamps Bar */}
+                          <div className="flex items-center space-x-1.5 mt-3">
+                            {Array.from({ length: settings.totalStampsRequired }).map((_, i) => (
+                              <div
+                                key={i}
+                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                                  i < customer.stamps
+                                    ? 'bg-amber-500 text-slate-950'
+                                    : 'bg-slate-100 text-slate-300 border border-slate-200'
+                                }`}
+                              >
+                                {i + 1}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Stamp Actions Controls */}
+                        <div className="flex items-center space-x-2 self-end md:self-center">
+                          {/* Decrement */}
+                          <button
+                            onClick={() => updateStamps(customer.mobile, -1)}
+                            disabled={customer.stamps === 0}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-40 transition"
+                            title="Remove 1 Stamp"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+
+                          {/* Stamp Count Display */}
+                          <span className="w-12 text-center font-extrabold text-slate-900 text-sm bg-slate-50 py-1.5 rounded-xl border border-slate-200">
+                            {customer.stamps}/{settings.totalStampsRequired}
+                          </span>
+
+                          {/* Increment */}
+                          <button
+                            onClick={() => updateStamps(customer.mobile, 1)}
+                            disabled={customer.stamps >= settings.totalStampsRequired}
+                            className="p-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold disabled:opacity-40 transition shadow-sm"
+                            title="Add 1 Stamp"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+
+                          {/* Redeem Button if max stamps */}
+                          {customer.stamps >= settings.totalStampsRequired && (
+                            <button
+                              onClick={() => redeemReward(customer.mobile)}
+                              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow"
+                            >
+                              Redeem
+                            </button>
+                          )}
+
+                          {/* Permanently Delete Customer */}
+                          <button
+                            onClick={() => deleteCustomer(customer.mobile)}
+                            className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition ml-2"
+                            title="Delete Record Completely"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: DYNAMIC WEBSITE CUSTOMIZATION */}
+            {adminTab === 'branding' && (
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                  <Edit3 className="w-5 h-5 text-amber-500" />
+                  <span>Customize App Content & Visuals</span>
+                </h3>
+
+                <form onSubmit={handleSaveSettings} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Brand / Business Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editingSettings.brandName}
+                        onChange={(e) => setEditingSettings({ ...editingSettings, brandName: e.target.value })}
+                        className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Tagline / Subheader
+                      </label>
+                      <input
+                        type="text"
+                        value={editingSettings.tagline}
+                        onChange={(e) => setEditingSettings({ ...editingSettings, tagline: e.target.value })}
+                        className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900"
+                        required
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Banner Image URL
+                      </label>
+                      <input
+                        type="url"
+                        value={editingSettings.bannerImage}
+                        onChange={(e) => setEditingSettings({ ...editingSettings, bannerImage: e.target.value })}
+                        className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Reward Title
+                      </label>
+                      <input
+                        type="text"
+                        value={editingSettings.rewardTitle}
+                        onChange={(e) => setEditingSettings({ ...editingSettings, rewardTitle: e.target.value })}
+                        className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Total Stamps Required
+                      </label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="20"
+                        value={editingSettings.totalStampsRequired}
+                        onChange={(e) => setEditingSettings({ ...editingSettings, totalStampsRequired: parseInt(e.target.value) || 10 })}
+                        className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900"
+                        required
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Reward Description
+                      </label>
+                      <textarea
+                        rows="2"
+                        value={editingSettings.rewardDescription}
+                        onChange={(e) => setEditingSettings({ ...editingSettings, rewardDescription: e.target.value })}
+                        className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-900"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm shadow transition"
+                    >
+                      Save Branding Changes
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* TAB 3: PASSCODE & SECURITY SYSTEM */}
+            {adminTab === 'security' && (
+              <div className="space-y-6">
+                
+                {/* Dual Passcode Architecture Explanation */}
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
+                  <h3 className="text-base font-bold text-slate-900 flex items-center space-x-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                    <span>Dual Passcode Architecture Overview</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Passcode 1 */}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-sm text-slate-800">Passcode 1 (Admin)</span>
+                        <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded">CUSTOMIZABLE</span>
+                      </div>
+                      <p className="text-xs text-slate-600">
+                        Initial: <code className="font-mono font-bold">9985656800</code>. Allows standard content management & stamp tracking. Changeable in setting panel.
+                      </p>
+                    </div>
+
+                    {/* Passcode 2 */}
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-sm text-amber-900">Passcode 2 (Master)</span>
+                        <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded">HARDCODED / HIDDEN</span>
+                      </div>
+                      <p className="text-xs text-amber-800">
+                        Value: <code className="font-mono font-bold">{MASTER_PASSCODE}</code>. Hardcoded in backend logic. Grants unresetable master override privileges.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Change Admin Passcode Form */}
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                  <h4 className="text-sm font-bold text-slate-900 mb-3">Update Customizable Admin Passcode (Passcode 1)</h4>
+                  <form onSubmit={handleChangeAdminPasscode} className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Enter new Passcode 1"
+                      value={passcodeChangeInput}
+                      onChange={(e) => setPasscodeChangeInput(e.target.value)}
+                      className="flex-1 p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm shadow transition"
+                    >
+                      Update Admin Passcode
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+      </main>
+
+      {/* FOOTER */}
+      <footer className="bg-white border-t border-slate-200 py-4 mt-8">
+        <div className="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400">
+          <p>© 2026 {settings.brandName} • Digital Loyalty Card Platform</p>
+        </div>
+      </footer>
+
+    </div>
+  );
+}
+```
